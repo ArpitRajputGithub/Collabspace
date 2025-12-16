@@ -14,7 +14,7 @@ class User {
     this.lastLoginAt = userData.last_login_at;
     this.createdAt = userData.created_at;
     this.updatedAt = userData.updated_at;
-    this.clerkId = userData.clerk_id; // Add Clerk ID support
+
   }
 
   // Create new user (original JWT method)
@@ -39,73 +39,7 @@ class User {
     }
   }
 
-  // Create new user from Clerk data
-  static async createFromClerk({ clerkId, firstName, lastName, email, avatarUrl }) {
-    const client = await pool.connect();
-    try {
-      const query = `
-        INSERT INTO users (clerk_id, first_name, last_name, email, avatar_url, email_verified)
-        VALUES ($1, $2, $3, $4, $5, true)
-        RETURNING *
-      `;
-      
-      const values = [clerkId, firstName, lastName, email.toLowerCase(), avatarUrl];
-      const result = await client.query(query, values);
-      
-      return new User(result.rows[0]);
-    } finally {
-      client.release();
-    }
-  }
 
-  // Find user by Clerk ID
-  static async findByClerkId(clerkId) {
-    const client = await pool.connect();
-    try {
-      const query = `
-        SELECT * FROM users 
-        WHERE clerk_id = $1 AND is_active = true
-      `;
-      
-      const result = await client.query(query, [clerkId]);
-      
-      if (result.rows.length === 0) {
-        return null;
-      }
-      
-      return new User(result.rows[0]);
-    } finally {
-      client.release();
-    }
-  }
-
-  // Update user from Clerk data
-  async updateFromClerk({ firstName, lastName, email, avatarUrl }) {
-    const client = await pool.connect();
-    try {
-      const query = `
-        UPDATE users 
-        SET first_name = $1, last_name = $2, email = $3, avatar_url = $4, updated_at = NOW()
-        WHERE id = $5
-        RETURNING *
-      `;
-      
-      const values = [firstName, lastName, email.toLowerCase(), avatarUrl, this.id];
-      const result = await client.query(query, values);
-      
-      if (result.rows.length > 0) {
-        // Update current instance
-        const updatedUser = new User(result.rows[0]);
-        Object.assign(this, updatedUser);
-      }
-      
-      return this;
-    } finally {
-      client.release();
-    }
-  }
-
-  // Find user by email (original method)
   static async findByEmail(email) {
     const client = await pool.connect();
     try {

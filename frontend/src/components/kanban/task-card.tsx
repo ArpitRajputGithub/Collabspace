@@ -32,6 +32,8 @@ interface Task {
   priority: 'low' | 'medium' | 'high' | 'urgent'
   dueDate?: string
   labels: string[]
+  statusId: string
+  position: number
   assignee?: {
     id: string
     name: string

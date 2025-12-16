@@ -52,7 +52,7 @@ export function useTasks(projectId: string) {
     queryFn: async () => {
       const data = await apiClient.getProjectBoard(projectId)
       // Extract tasks and statuses from board
-      const allTasks = data.board.flatMap((column: any) => 
+      const allTasks = data.board.flatMap((column: any) =>
         column.tasks.map((task: any) => ({
           ...task,
           statusId: column.id, // Ensure statusId is set
@@ -68,7 +68,7 @@ export function useTasks(projectId: string) {
   useEffect(() => {
     if (socket && isConnected && projectId) {
       socket.emit('join-project', { projectId })
-      
+
       return () => {
         socket.emit('leave-project', { projectId })
       }
@@ -89,9 +89,9 @@ export function useTasks(projectId: string) {
 
     // Task updated
     socket.on('task-updated', (data: TaskUpdate) => {
-      setOptimisticTasks(prev => 
-        prev.map(task => 
-          task.id === data.taskId 
+      setOptimisticTasks(prev =>
+        prev.map(task =>
+          task.id === data.taskId
             ? { ...task, ...data.changes }
             : task
         )
@@ -117,19 +117,18 @@ export function useTasks(projectId: string) {
 
     return () => {
       socket.off('task-created')
-      socket.off('task-updated')  
+      socket.off('task-updated')
       socket.off('task-moved')
       socket.off('task-deleted')
     }
   }, [socket])
 
-  // Create task mutation with optimistic updates
   const createTaskMutation = useMutation({
     mutationFn: async (data: {
       title: string
       description?: string
       statusId: string
-      priority?: string
+      priority?: 'low' | 'medium' | 'high' | 'urgent'
       assigneeId?: string
       labels?: string[]
       dueDate?: string
@@ -165,7 +164,7 @@ export function useTasks(projectId: string) {
     onError: (err, newTask, context) => {
       // Revert optimistic update
       if (context?.optimisticTask) {
-        setOptimisticTasks(prev => 
+        setOptimisticTasks(prev =>
           prev.filter(task => task.id !== context.optimisticTask.id)
         )
       }
@@ -204,10 +203,10 @@ export function useTasks(projectId: string) {
 
   // Move task mutation
   const moveTaskMutation = useMutation({
-    mutationFn: async ({ taskId, statusId, position }: { 
+    mutationFn: async ({ taskId, statusId, position }: {
       taskId: string
       statusId: string
-      position: number 
+      position: number
     }) => {
       return apiClient.moveTask(taskId, { statusId, position })
     },
@@ -215,7 +214,7 @@ export function useTasks(projectId: string) {
       // Optimistic update
       setOptimisticTasks(prev =>
         prev.map(task =>
-          task.id === taskId 
+          task.id === taskId
             ? { ...task, statusId, position }
             : task
         )

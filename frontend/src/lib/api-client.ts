@@ -6,7 +6,6 @@ interface ApiResponse<T> {
 
 interface User {
   id: string
-  clerkId?: string
   firstName: string
   lastName: string
   email: string
