@@ -37,14 +37,14 @@ export default function RootLayout({
       <body className={`${montserrat.className} ${inter.variable} ${forum.variable}`}>
         <ThemeProvider
           attribute="class"
-          defaultTheme="system"
+          defaultTheme="light"
           enableSystem
           disableTransitionOnChange
         >
           <QueryProvider>
             <AuthProvider>
               <SocketProvider>
-                <div className="relative flex min-h-screen flex-col" style={{ backgroundColor: 'lab(98.26 0 0)' }}>
+                <div className="relative flex min-h-screen flex-col bg-background">
                   {children}
                 </div>
                 <Toaster />

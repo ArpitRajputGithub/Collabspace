@@ -10,12 +10,11 @@ import {
   Settings, 
   Plus,
   Search,
-  Bell,
-  Sparkles,
   Home,
   Calendar,
   MessageSquare,
-  LogOut
+  LogOut,
+  ChevronRight
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
@@ -39,47 +38,16 @@ interface NavItem {
   href: string
   icon: React.ComponentType<{ className?: string }>
   badge?: number
-  gradient?: string
 }
 
 const navItems: NavItem[] = [
-  {
-    title: 'Dashboard',
-    href: '/dashboard',
-    icon: Home,
-    gradient: 'from-blue-500 to-cyan-500'
-  },
-  {
-    title: 'Projects',
-    href: '/projects',
-    icon: FolderKanban,
-    gradient: 'from-purple-500 to-pink-500'
-  },
-  {
-    title: 'Calendar',
-    href: '/calendar',
-    icon: Calendar,
-    gradient: 'from-green-500 to-emerald-500'
-  },
-  {
-    title: 'Messages',
-    href: '/messages',
-    icon: MessageSquare,
-    badge: 3,
-    gradient: 'from-orange-500 to-red-500'
-  },
-  {
-    title: 'Team',
-    href: '/team',
-    icon: Users,
-    gradient: 'from-indigo-500 to-purple-500'
-  },
-  {
-    title: 'Settings',
-    href: '/settings',
-    icon: Settings,
-    gradient: 'from-gray-500 to-gray-600'
-  },
+  { title: 'Home', href: '/dashboard', icon: Home },
+  { title: 'Projects', href: '/projects', icon: FolderKanban },
+  { title: 'Tasks', href: '/tasks', icon: LayoutDashboard },
+  { title: 'Calendar', href: '/calendar', icon: Calendar },
+  { title: 'Messages', href: '/messages', icon: MessageSquare, badge: 3 },
+  { title: 'Team', href: '/team', icon: Users },
+  { title: 'Settings', href: '/settings', icon: Settings },
 ]
 
 export function AppSidebar() {
@@ -88,34 +56,44 @@ export function AppSidebar() {
   const { workspaces, isLoading } = useWorkspaces()
 
   return (
-    <div className="w-72 flex flex-col bg-white/5 backdrop-blur-xl border-r border-white/10">
+    <div className="w-64 flex flex-col bg-card border-r border-border">
       {/* Logo Section */}
-      <div className="p-6 pb-4">
-        <div className="flex items-center space-x-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-r from-blue-500 to-purple-600 shadow-lg">
-            <Sparkles className="h-5 w-5 text-white" />
+      <div className="p-5 pb-4">
+        <div className="flex items-center gap-3">
+          <div 
+            className="flex h-9 w-9 items-center justify-center rounded-lg"
+            style={{ backgroundColor: '#123458' }}
+          >
+            <svg className="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 24 24">
+              <path d="M13 3L4 14h7l-2 7 9-11h-7l2-7z" />
+            </svg>
           </div>
           <div>
-            <div className="font-bold text-white text-lg">CollabSpace</div>
-            <div className="text-xs text-gray-400">Team Workspace</div>
+            <div 
+              className="font-bold text-foreground"
+              style={{ fontFamily: "'Chillax', sans-serif" }}
+            >
+              CollabSpace
+            </div>
+            <div className="text-xs text-muted-foreground">Team Workspace</div>
           </div>
         </div>
       </div>
 
       {/* Search */}
-      <div className="px-6 pb-4">
+      <div className="px-4 pb-4">
         <div className="relative">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
-            placeholder="Search workspace..."
-            className="pl-10 bg-white/5 border-white/20 text-white placeholder:text-gray-400 focus:ring-blue-500 focus:border-blue-500"
+            placeholder="Search..."
+            className="pl-9 h-9 bg-muted/50 border-border text-foreground placeholder:text-muted-foreground"
           />
         </div>
       </div>
 
       {/* Main Navigation */}
-      <nav className="flex-1 px-4 space-y-2">
-        <div className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-4 px-2">
+      <nav className="flex-1 px-3 space-y-1">
+        <div className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-3 px-3">
           Navigation
         </div>
         
@@ -128,31 +106,18 @@ export function AppSidebar() {
               <Button
                 variant="ghost"
                 className={cn(
-                  "w-full justify-start h-12 px-4 transition-all duration-200 group relative overflow-hidden",
+                  "w-full justify-start h-10 px-3 transition-all duration-200",
                   isActive 
-                    ? "bg-white/10 text-white shadow-lg" 
-                    : "text-gray-300 hover:text-white hover:bg-white/5"
+                    ? "bg-primary text-primary-foreground hover:bg-primary/90" 
+                    : "text-foreground hover:bg-muted"
                 )}
               >
-                {isActive && (
-                  <div className={cn(
-                    "absolute inset-0 bg-gradient-to-r opacity-20 rounded-lg",
-                    item.gradient
-                  )} />
-                )}
-                <div className={cn(
-                  "flex h-8 w-8 items-center justify-center rounded-lg mr-3 transition-all",
-                  isActive 
-                    ? `bg-gradient-to-r ${item.gradient} shadow-lg`
-                    : "bg-white/5 group-hover:bg-white/10"
-                )}>
-                  <Icon className="h-4 w-4" />
-                </div>
-                <span className="flex-1 text-left font-medium">{item.title}</span>
+                <Icon className="h-4 w-4 mr-3" />
+                <span className="flex-1 text-left text-sm font-medium">{item.title}</span>
                 {item.badge && (
                   <Badge 
                     variant="secondary" 
-                    className="ml-auto bg-gradient-to-r from-blue-500 to-purple-500 text-white border-0 text-xs"
+                    className="ml-auto bg-primary text-primary-foreground text-xs h-5 px-1.5"
                   >
                     {item.badge}
                   </Badge>
@@ -163,42 +128,33 @@ export function AppSidebar() {
         })}
       </nav>
 
-      <Separator className="bg-white/10 mx-4" />
+      <Separator className="mx-4 bg-border" />
 
-      {/* Workspaces Section */}
+      {/* Recent Projects Section */}
       <div className="p-4">
-        <div className="flex items-center justify-between mb-3 px-2">
-          <div className="text-xs font-semibold text-gray-400 uppercase tracking-wider">
-            Workspaces
+        <div className="flex items-center justify-between mb-3 px-1">
+          <div className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+            Recent Projects
           </div>
-          <Button size="sm" variant="ghost" className="h-6 w-6 p-0 text-gray-400 hover:text-white">
-            <Plus className="h-4 w-4" />
-          </Button>
         </div>
         
         <div className="space-y-1">
           {isLoading ? (
-            <div className="text-sm text-gray-400 px-3 py-2">Loading...</div>
+            <div className="text-sm text-muted-foreground px-3 py-2">Loading...</div>
           ) : workspaces.length === 0 ? (
-            <div className="text-sm text-gray-400 px-3 py-2">No workspaces yet</div>
-          ) : workspaces.map((workspace) => (
+            <div className="text-sm text-muted-foreground px-3 py-2">No workspaces yet</div>
+          ) : workspaces.slice(0, 3).map((workspace) => (
             <Link key={workspace.id} href={`/projects?workspace=${workspace.slug}`}>
               <Button
                 variant="ghost"
-                className="w-full justify-start h-10 px-3 text-gray-300 hover:text-white hover:bg-white/5 group"
+                className="w-full justify-start h-9 px-3 text-foreground hover:bg-muted group"
               >
-                <Avatar className="h-6 w-6 mr-3">
-                  <AvatarImage src={workspace.avatarUrl || undefined} />
-                  <AvatarFallback className="bg-gradient-to-r from-blue-500 to-purple-500 text-white text-xs">
-                    {workspace.name?.charAt(0)?.toUpperCase() || 'W'}
-                  </AvatarFallback>
-                </Avatar>
-                <div className="flex-1 text-left">
-                  <div className="text-sm font-medium truncate">{workspace.name}</div>
-                </div>
-                <div className="text-xs text-gray-500 group-hover:text-gray-400">
-                  {workspace.memberCount || 0}
-                </div>
+                <div 
+                  className="w-2 h-2 rounded-full mr-3"
+                  style={{ backgroundColor: '#123458' }}
+                />
+                <span className="flex-1 text-left text-sm truncate">{workspace.name}</span>
+                <ChevronRight className="h-3 w-3 opacity-0 group-hover:opacity-100 transition-opacity" />
               </Button>
             </Link>
           ))}
@@ -208,64 +164,60 @@ export function AppSidebar() {
           trigger={
             <Button 
               variant="ghost" 
-              className="w-full justify-start h-10 px-3 text-gray-400 hover:text-white hover:bg-white/5 mt-2"
+              className="w-full justify-start h-9 px-3 text-muted-foreground hover:text-foreground hover:bg-muted mt-1"
             >
-              <div className="w-6 h-6 rounded-md mr-3 border border-dashed border-gray-500 flex items-center justify-center">
-                <Plus className="h-3 w-3" />
-              </div>
+              <Plus className="h-4 w-4 mr-3" />
               <span className="text-sm">Add workspace</span>
             </Button>
           }
         />
       </div>
 
-      <Separator className="bg-white/10 mx-4" />
+      <Separator className="mx-4 bg-border" />
 
       {/* User Section */}
       <div className="p-4">
-        <div className="flex items-center justify-between p-3 rounded-xl bg-white/5 border border-white/10">
-          <div className="flex items-center space-x-3">
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" className="p-0 h-auto hover:bg-transparent">
-                  <Avatar className="h-10 w-10 cursor-pointer">
-                    <AvatarImage src={user?.avatarUrl || undefined} />
-                    <AvatarFallback className="bg-gradient-to-r from-blue-500 to-purple-500 text-white">
-                      {user?.firstName?.charAt(0)?.toUpperCase() || 'U'}
-                    </AvatarFallback>
-                  </Avatar>
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="start" className="w-56">
-                <DropdownMenuLabel>My Account</DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem asChild>
-                  <Link href="/settings">
-                    <Settings className="mr-2 h-4 w-4" />
-                    Settings
-                  </Link>
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={logout} className="text-red-500 focus:text-red-500">
-                  <LogOut className="mr-2 h-4 w-4" />
-                  Sign out
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-            <div className="min-w-0 flex-1">
-              <div className="text-sm font-medium text-white truncate">
-                {user?.firstName} {user?.lastName}
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button 
+              variant="ghost" 
+              className="w-full justify-start h-auto p-2 hover:bg-muted"
+            >
+              <Avatar className="h-8 w-8 mr-3">
+                <AvatarImage src={user?.avatarUrl || undefined} />
+                <AvatarFallback 
+                  className="text-white text-sm"
+                  style={{ backgroundColor: '#123458' }}
+                >
+                  {user?.firstName?.charAt(0)?.toUpperCase() || 'U'}
+                </AvatarFallback>
+              </Avatar>
+              <div className="flex-1 text-left min-w-0">
+                <div className="text-sm font-medium text-foreground truncate">
+                  {user?.firstName} {user?.lastName}
+                </div>
+                <div className="text-xs text-muted-foreground truncate">
+                  {user?.email}
+                </div>
               </div>
-              <div className="text-xs text-gray-400 truncate">
-                {user?.email}
-              </div>
-            </div>
-          </div>
-          
-          <Button size="sm" variant="ghost" className="h-8 w-8 p-0 text-gray-400 hover:text-white">
-            <Bell className="h-4 w-4" />
-          </Button>
-        </div>
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="start" className="w-56">
+            <DropdownMenuLabel>My Account</DropdownMenuLabel>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem asChild>
+              <Link href="/settings">
+                <Settings className="mr-2 h-4 w-4" />
+                Settings
+              </Link>
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onClick={logout} className="text-destructive focus:text-destructive">
+              <LogOut className="mr-2 h-4 w-4" />
+              Sign out
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
     </div>
   )

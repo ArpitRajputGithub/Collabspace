@@ -7,6 +7,8 @@ import { QuickActions } from '@/components/dashboard/quick-actions'
 import { RecentActivity } from '@/components/dashboard/recent-activity'
 import { useAuth } from '@/hooks/use-auth'
 import { LoadingSpinner } from '@/components/ui/loading-spinner'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Skeleton } from '@/components/ui/skeleton'
 
 export default function DashboardPage() {
   const { isLoaded, isConnecting } = useAuth()
@@ -16,33 +18,41 @@ export default function DashboardPage() {
       <div className="flex items-center justify-center min-h-[400px]">
         <div className="text-center space-y-4">
           <LoadingSpinner size="lg" />
-          <p className="text-gray-400">Loading your workspace...</p>
+          <p className="text-muted-foreground">Loading your workspace...</p>
         </div>
       </div>
     )
   }
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       <DashboardHeader />
       
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        <div className="lg:col-span-2">
-          <div className="space-y-6">
-            <div className="flex items-center justify-between">
-              <h2 className="text-xl font-bold text-white">Your Workspaces</h2>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Main Content - Workspaces */}
+        <div className="lg:col-span-2 space-y-6">
+          <div>
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-semibold text-foreground">Your Workspaces</h2>
               {isConnecting && (
-                <div className="flex items-center space-x-2 text-sm text-gray-400">
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
                   <LoadingSpinner size="sm" />
-                  <span>Connecting to backend...</span>
+                  <span>Syncing...</span>
                 </div>
               )}
             </div>
             
             <Suspense fallback={
-              <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-2">
+              <div className="grid gap-4 md:grid-cols-2">
                 {[1, 2, 3, 4].map((i) => (
-                  <div key={i} className="h-64 bg-white/5 border border-white/20 rounded-xl animate-pulse" />
+                  <Card key={i} className="bg-card border-border">
+                    <CardHeader>
+                      <Skeleton className="h-4 w-2/3" />
+                    </CardHeader>
+                    <CardContent>
+                      <Skeleton className="h-16 w-full" />
+                    </CardContent>
+                  </Card>
                 ))}
               </div>
             }>
@@ -51,6 +61,7 @@ export default function DashboardPage() {
           </div>
         </div>
         
+        {/* Sidebar - Quick Actions & Activity */}
         <div className="space-y-6">
           <QuickActions />
           <RecentActivity />

@@ -3,14 +3,18 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { motion } from 'framer-motion'
-import { Eye, EyeOff, Mail, Lock, User, Loader2 } from 'lucide-react'
+import { Eye, EyeOff, Loader2, Check } from 'lucide-react'
 import { useAuth } from '@/providers/auth-provider'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
 import { toast } from 'sonner'
+import { AuthLayout } from '@/components/auth/AuthLayout'
+import { SocialLoginButtons } from '@/components/auth/SocialLoginButtons'
 
+/**
+ * SignUpPage - Registration form with matching split-panel design
+ * 
+ * Uses the same AuthLayout and styling as sign-in for consistency.
+ * Form fields: First Name, Last Name, Email, Password, Confirm Password
+ */
 export default function SignUpPage() {
   const [firstName, setFirstName] = useState('')
   const [lastName, setLastName] = useState('')
@@ -18,6 +22,7 @@ export default function SignUpPage() {
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
+  const [agreedToTerms, setAgreedToTerms] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const { register } = useAuth()
   const router = useRouter()
@@ -35,8 +40,13 @@ export default function SignUpPage() {
       return
     }
 
-    if (password.length < 6) {
-      toast.error('Password must be at least 6 characters')
+    if (!allRequirementsMet) {
+      toast.error('Password does not meet all requirements')
+      return
+    }
+
+    if (!agreedToTerms) {
+      toast.error('Please agree to the Terms & Privacy')
       return
     }
 
@@ -56,157 +66,247 @@ export default function SignUpPage() {
     setIsLoading(false)
   }
 
+  // Password validation helpers
+  const passwordRequirements = [
+    { label: 'At least 8 characters', test: (p: string) => p.length >= 8 },
+    { label: 'One lowercase letter', test: (p: string) => /[a-z]/.test(p) },
+    { label: 'One uppercase letter', test: (p: string) => /[A-Z]/.test(p) },
+    { label: 'One number', test: (p: string) => /\d/.test(p) },
+    { label: 'One special character (@$#!%*?&)', test: (p: string) => /[@$#!%*?&]/.test(p) },
+  ]
+
+  const allRequirementsMet = passwordRequirements.every(req => req.test(password))
+
+  // Reusable input style
+  const inputStyle = {
+    borderColor: '#D4C9BE',
+    backgroundColor: 'white',
+    color: '#030303'
+  }
+
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 p-4">
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
-        className="w-full max-w-md"
-      >
-        {/* Logo */}
-        <div className="text-center mb-8">
-          <Link href="/" className="inline-block">
-            <h1 className="text-3xl font-bold text-white">CollabSpace</h1>
-          </Link>
-          <p className="text-slate-400 mt-2">Create your account to get started</p>
+    <AuthLayout
+      title="Create Account"
+      subtitle="Join CollabSpace and start collaborating with your team"
+    >
+      {/* Social Login Buttons */}
+      <SocialLoginButtons />
+
+      {/* Divider */}
+      <div className="relative my-4">
+        <div className="absolute inset-0 flex items-center">
+          <div 
+            className="w-full border-t"
+            style={{ borderColor: '#D4C9BE' }}
+          />
         </div>
+        <div className="relative flex justify-center text-sm">
+          <span 
+            className="px-4"
+            style={{ backgroundColor: '#F1EFEC', color: '#666666' }}
+          >
+            or
+          </span>
+        </div>
+      </div>
 
-        {/* Form Card */}
-        <div className="bg-white/10 backdrop-blur-lg rounded-2xl p-8 shadow-2xl border border-white/20">
-          <form onSubmit={handleSubmit} className="space-y-5">
-            {/* Name Row */}
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="firstName" className="text-white">First Name</Label>
-                <div className="relative">
-                  <User className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
-                  <Input
-                    id="firstName"
-                    type="text"
-                    placeholder="John"
-                    value={firstName}
-                    onChange={(e) => setFirstName(e.target.value)}
-                    className="pl-10 bg-white/10 border-white/20 text-white placeholder:text-slate-400 focus:border-purple-500"
-                    disabled={isLoading}
-                  />
-                </div>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="lastName" className="text-white">Last Name</Label>
-                <Input
-                  id="lastName"
-                  type="text"
-                  placeholder="Doe"
-                  value={lastName}
-                  onChange={(e) => setLastName(e.target.value)}
-                  className="bg-white/10 border-white/20 text-white placeholder:text-slate-400 focus:border-purple-500"
-                  disabled={isLoading}
-                />
-              </div>
-            </div>
-
-            {/* Email */}
-            <div className="space-y-2">
-              <Label htmlFor="email" className="text-white">Email</Label>
-              <div className="relative">
-                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
-                <Input
-                  id="email"
-                  type="email"
-                  placeholder="you@example.com"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="pl-10 bg-white/10 border-white/20 text-white placeholder:text-slate-400 focus:border-purple-500"
-                  disabled={isLoading}
-                />
-              </div>
-            </div>
-
-            {/* Password */}
-            <div className="space-y-2">
-              <Label htmlFor="password" className="text-white">Password</Label>
-              <div className="relative">
-                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
-                <Input
-                  id="password"
-                  type={showPassword ? 'text' : 'password'}
-                  placeholder="••••••••"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="pl-10 pr-10 bg-white/10 border-white/20 text-white placeholder:text-slate-400 focus:border-purple-500"
-                  disabled={isLoading}
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white transition-colors"
-                >
-                  {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
-                </button>
-              </div>
-            </div>
-
-            {/* Confirm Password */}
-            <div className="space-y-2">
-              <Label htmlFor="confirmPassword" className="text-white">Confirm Password</Label>
-              <div className="relative">
-                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
-                <Input
-                  id="confirmPassword"
-                  type={showPassword ? 'text' : 'password'}
-                  placeholder="••••••••"
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  className="pl-10 bg-white/10 border-white/20 text-white placeholder:text-slate-400 focus:border-purple-500"
-                  disabled={isLoading}
-                />
-              </div>
-            </div>
-
-            {/* Submit Button */}
-            <Button
-              type="submit"
-              className="w-full bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white font-semibold py-3"
-              disabled={isLoading}
+      {/* Registration Form */}
+      <form onSubmit={handleSubmit} className="space-y-3">
+        {/* Name Row - Two columns */}
+        <div className="grid grid-cols-2 gap-3">
+          <div className="space-y-1">
+            <label 
+              htmlFor="firstName" 
+              className="block text-sm font-medium"
+              style={{ color: '#030303' }}
             >
-              {isLoading ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Creating account...
-                </>
-              ) : (
-                'Create Account'
-              )}
-            </Button>
-          </form>
-
-          {/* Divider */}
-          <div className="relative my-6">
-            <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-white/20"></div>
-            </div>
-            <div className="relative flex justify-center text-sm">
-              <span className="px-2 bg-transparent text-slate-400">or</span>
-            </div>
+              First Name
+            </label>
+            <input
+              id="firstName"
+              type="text"
+              placeholder="John"
+              value={firstName}
+              onChange={(e) => setFirstName(e.target.value)}
+              disabled={isLoading}
+              className="w-full px-3 py-2.5 rounded-lg border-2 outline-none transition-all duration-200 focus:ring-2"
+              style={inputStyle}
+            />
           </div>
-
-          {/* Sign In Link */}
-          <p className="text-center text-slate-400">
-            Already have an account?{' '}
-            <Link href="/sign-in" className="text-purple-400 hover:text-purple-300 font-medium transition-colors">
-              Sign in
-            </Link>
-          </p>
+          <div className="space-y-1">
+            <label 
+              htmlFor="lastName" 
+              className="block text-sm font-medium"
+              style={{ color: '#030303' }}
+            >
+              Last Name
+            </label>
+            <input
+              id="lastName"
+              type="text"
+              placeholder="Doe"
+              value={lastName}
+              onChange={(e) => setLastName(e.target.value)}
+              disabled={isLoading}
+              className="w-full px-3 py-2.5 rounded-lg border-2 outline-none transition-all duration-200 focus:ring-2"
+              style={inputStyle}
+            />
+          </div>
         </div>
 
-        {/* Back to Home */}
-        <p className="text-center mt-6">
-          <Link href="/" className="text-slate-400 hover:text-white text-sm transition-colors">
-            ← Back to home
-          </Link>
-        </p>
-      </motion.div>
-    </div>
+        {/* Email Field */}
+        <div className="space-y-1">
+          <label 
+            htmlFor="email" 
+            className="block text-sm font-medium"
+            style={{ color: '#030303' }}
+          >
+            Email address
+          </label>
+          <input
+            id="email"
+            type="email"
+            placeholder="name@company.com"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            disabled={isLoading}
+            className="w-full px-3 py-2.5 rounded-lg border-2 outline-none transition-all duration-200 focus:ring-2"
+            style={inputStyle}
+          />
+        </div>
+
+        {/* Password Field */}
+        <div className="space-y-1">
+          <label 
+            htmlFor="password" 
+            className="block text-sm font-medium"
+            style={{ color: '#030303' }}
+          >
+            Password
+          </label>
+          <div className="relative">
+            <input
+              id="password"
+              type={showPassword ? 'text' : 'password'}
+              placeholder="Create a strong password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              disabled={isLoading}
+              className="w-full px-3 py-2.5 pr-10 rounded-lg border-2 outline-none transition-all duration-200 focus:ring-2"
+              style={inputStyle}
+            />
+            <button
+              type="button"
+              onClick={() => setShowPassword(!showPassword)}
+              className="absolute right-3 top-1/2 -translate-y-1/2 transition-colors"
+              style={{ color: '#666666' }}
+            >
+              {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+            </button>
+          </div>
+          
+          {/* Password Requirements Checklist */}
+          {password.length > 0 && (
+            <div className="mt-2 space-y-1">
+              {passwordRequirements.map((req, index) => {
+                const isMet = req.test(password)
+                return (
+                  <div 
+                    key={index} 
+                    className="flex items-center gap-2 text-xs"
+                  >
+                    <div 
+                      className={`w-4 h-4 rounded-full flex items-center justify-center transition-all duration-200 ${
+                        isMet ? 'bg-green-500' : 'bg-gray-200'
+                      }`}
+                    >
+                      {isMet && <Check className="w-3 h-3 text-white" />}
+                    </div>
+                    <span style={{ color: isMet ? '#22c55e' : '#666666' }}>
+                      {req.label}
+                    </span>
+                  </div>
+                )
+              })}
+            </div>
+          )}
+        </div>
+
+        {/* Confirm Password Field */}
+        <div className="space-y-1">
+          <label 
+            htmlFor="confirmPassword" 
+            className="block text-sm font-medium"
+            style={{ color: '#030303' }}
+          >
+            Confirm Password
+          </label>
+          <input
+            id="confirmPassword"
+            type={showPassword ? 'text' : 'password'}
+            placeholder="Re-enter password"
+            value={confirmPassword}
+            onChange={(e) => setConfirmPassword(e.target.value)}
+            disabled={isLoading}
+            className="w-full px-3 py-2.5 rounded-lg border-2 outline-none transition-all duration-200 focus:ring-2"
+            style={inputStyle}
+          />
+        </div>
+
+        {/* Terms & Privacy Checkbox */}
+        <div className="flex items-center gap-2">
+          <input
+            id="terms"
+            type="checkbox"
+            checked={agreedToTerms}
+            onChange={(e) => setAgreedToTerms(e.target.checked)}
+            className="w-4 h-4 rounded border-2 cursor-pointer"
+            style={{ 
+              borderColor: '#D4C9BE',
+              accentColor: '#123458'
+            }}
+          />
+          <label 
+            htmlFor="terms" 
+            className="text-sm cursor-pointer"
+            style={{ color: '#666666' }}
+          >
+            I agree to the{' '}
+            <Link href="/terms" className="underline font-medium" style={{ color: '#123458' }}>
+              Terms & Privacy
+            </Link>
+          </label>
+        </div>
+
+        {/* Submit Button */}
+        <button
+          type="submit"
+          disabled={isLoading}
+          className="w-full py-3 rounded-full font-semibold text-white transition-all duration-200 hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+          style={{ backgroundColor: '#123458' }}
+        >
+          {isLoading ? (
+            <>
+              <Loader2 className="h-4 w-4 animate-spin" />
+              Creating account...
+            </>
+          ) : (
+            'Create Account'
+          )}
+        </button>
+      </form>
+
+      {/* Sign In Link */}
+      <p className="text-center mt-4" style={{ color: '#666666' }}>
+        Already have an account?{' '}
+        <Link 
+          href="/sign-in" 
+          className="font-medium hover:underline"
+          style={{ color: '#123458' }}
+        >
+          Sign in
+        </Link>
+      </p>
+    </AuthLayout>
   )
 }
