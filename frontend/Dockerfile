@@ -5,9 +5,9 @@ FROM node:20-alpine AS base
 FROM base AS deps
 WORKDIR /app
 
-# Copy package files
+# Copy package files and install
 COPY package*.json ./
-RUN npm ci
+RUN npm install
 
 # Rebuild the source code only when needed
 FROM base AS builder
