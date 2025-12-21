@@ -2,6 +2,7 @@
 # Dependencies
 # ===================
 node_modules/
+docs/context.json
 .pnp
 .pnp.js
 .yarn/install-state.gz
