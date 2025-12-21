@@ -1,5 +1,5 @@
-const Workspace = require('../models/Workspace');
-const User = require('../models/User');
+const Workspace = require('../models/workspace');
+const User = require('../models/user');
 
 // Helper function to get user from JWT auth
 const getAuthenticatedUser = async (req) => {

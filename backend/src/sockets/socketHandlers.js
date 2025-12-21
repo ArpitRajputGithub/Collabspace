@@ -1,5 +1,5 @@
 const jwt = require('jsonwebtoken');
-const User = require('../models/User');
+const User = require('../models/user');
 
 // Socket.io authentication middleware (JWT only)
 const authenticateSocket = async (socket, next) => {
