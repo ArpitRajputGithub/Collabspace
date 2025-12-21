@@ -1,10 +1,10 @@
 "use client"
 
-import { useState } from 'react'
+import { useState, Suspense } from 'react'
 import { motion } from 'framer-motion'
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
-import { Plus, FolderKanban, Users, Calendar, MoreHorizontal, Building2, ArrowLeft } from 'lucide-react'
+import { Plus, FolderKanban, Users, Calendar, MoreHorizontal, Building2, ArrowLeft, Loader2 } from 'lucide-react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -14,7 +14,7 @@ import { useProjects } from '@/hooks/use-projects'
 import { useWorkspace, useWorkspaces } from '@/hooks/use-workspaces'
 import { CreateProjectModal } from '@/components/modals/create-project-modal'
 
-export default function ProjectsPage() {
+function ProjectsContent() {
   const searchParams = useSearchParams()
   const workspaceSlug = searchParams.get('workspace') || ''
   const [createModalOpen, setCreateModalOpen] = useState(false)
@@ -308,5 +308,13 @@ export default function ProjectsPage() {
         )}
       </div>
     </div>
+  )
+}
+
+export default function ProjectsPage() {
+  return (
+    <Suspense fallback={<div className="flex items-center justify-center h-full"><Loader2 className="h-8 w-8 animate-spin" /></div>}>
+      <ProjectsContent />
+    </Suspense>
   )
 }

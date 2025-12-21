@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from 'react'
+import { useState, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { Eye, EyeOff, Loader2 } from 'lucide-react'
@@ -9,19 +9,7 @@ import { toast } from 'sonner'
 import { AuthLayout } from '@/components/auth/AuthLayout'
 import { SocialLoginButtons } from '@/components/auth/SocialLoginButtons'
 
-/**
- * SignInPage - Login form with the new split-panel design
- * 
- * Key changes from the previous design:
- * 1. Uses AuthLayout for consistent split-panel structure
- * 2. Light background instead of dark glassmorphism
- * 3. Social login buttons (Google/Apple) at the top
- * 4. Labels above inputs (not floating)
- * 5. Password visibility toggle
- * 6. Forgot password link
- * 7. Terms & Privacy checkbox (optional)
- */
-export default function SignInPage() {
+function SignInForm() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
@@ -209,5 +197,13 @@ export default function SignInPage() {
         </Link>
       </p>
     </AuthLayout>
+  )
+}
+
+export default function SignInPage() {
+  return (
+    <Suspense fallback={<div className="flex items-center justify-center min-h-screen"><Loader2 className="h-8 w-8 animate-spin" /></div>}>
+      <SignInForm />
+    </Suspense>
   )
 }
