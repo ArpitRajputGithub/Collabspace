@@ -3,19 +3,18 @@ FROM node:20-alpine
 
 WORKDIR /app
 
-# Install dependencies first (better caching)
+# Copy package files
 COPY package*.json ./
-RUN npm ci --omit=dev
+
+# Install production dependencies only
+ENV NODE_ENV=production
+RUN npm install --production
 
 # Copy source code
 COPY . .
 
 # Expose port
 EXPOSE 9000
-
-# Health check
-HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-  CMD wget --no-verbose --tries=1 --spider http://localhost:9000/health || exit 1
 
 # Start the server
 CMD ["npm", "start"]
