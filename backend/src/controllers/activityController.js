@@ -1,4 +1,5 @@
 const Activity = require('../models/activity');
+const { sendSuccess, sendError } = require('../utils/apiResponse');
 
 // Get activities for a specific workspace
 const getWorkspaceActivities = async (req, res) => {
@@ -9,17 +10,11 @@ const getWorkspaceActivities = async (req, res) => {
     // req.workspace is set by the isMember middleware
     const activities = await Activity.getByWorkspace(workspaceId, limit);
 
-    res.json({
-      success: true,
-      data: activities
-    });
+    return sendSuccess(res, activities);
 
   } catch (error) {
     console.error('Get workspace activities error:', error);
-    res.status(500).json({
-      success: false,
-      error: 'Internal server error while fetching activities'
-    });
+    return sendError(res, 500, 'Internal server error while fetching activities');
   }
 };
 
@@ -30,26 +25,17 @@ const getUserRecentActivities = async (req, res) => {
     
     // Get user from JWT auth
     if (!req.user || !req.user.id) {
-      return res.status(401).json({
-        success: false,
-        error: 'Authentication required'
-      });
+      return sendError(res, 401, 'Authentication required');
     }
     const userId = req.user.id;
 
     const activities = await Activity.getRecentForUser(userId, limit);
 
-    res.json({
-      success: true,
-      data: activities
-    });
+    return sendSuccess(res, activities);
 
   } catch (error) {
     console.error('Get user recent activities error:', error);
-    res.status(500).json({
-      success: false,
-      error: 'Internal server error while fetching recent activities'
-    });
+    return sendError(res, 500, 'Internal server error while fetching recent activities');
   }
 };
 

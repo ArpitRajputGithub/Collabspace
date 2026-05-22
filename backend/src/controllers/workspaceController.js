@@ -1,5 +1,7 @@
 const Workspace = require('../models/workspace');
 const User = require('../models/user');
+const Activity = require('../models/activity');
+const { sendSuccess, sendError } = require('../utils/apiResponse');
 
 // Helper function to get user from JWT auth
 const getAuthenticatedUser = async (req) => {
@@ -32,10 +34,7 @@ const createWorkspace = async (req, res) => {
     // Check if slug is already taken
     const existingWorkspace = await Workspace.findBySlug(slug);
     if (existingWorkspace) {
-      return res.status(409).json({
-        success: false,
-        error: 'Workspace slug is already taken'
-      });
+      return sendError(res, 409, 'Workspace slug is already taken');
     }
 
     // Create workspace
@@ -46,27 +45,20 @@ const createWorkspace = async (req, res) => {
       ownerId
     });
 
-    // Automatically add owner as admin
-    await workspace.addMember(ownerId, 'owner');
-
-    res.status(201).json({
-      success: true,
-      message: 'Workspace created successfully',
-      data: {
+    return sendSuccess(res, {
         id: workspace.id,
         name: workspace.name,
         slug: workspace.slug,
         description: workspace.description,
         createdAt: workspace.createdAt
-      }
+    }, {
+      status: 201,
+      message: 'Workspace created successfully'
     });
 
   } catch (error) {
     console.error('Create workspace error:', error);
-    res.status(500).json({
-      success: false,
-      error: error.message || 'Internal server error while creating workspace'
-    });
+    return sendError(res, 500, error.message || 'Internal server error while creating workspace');
   }
 };
 
@@ -116,13 +108,11 @@ const getUserWorkspaces = async (req, res) => {
       })
     );
 
-    res.json(workspacesWithStats);
+    return sendSuccess(res, workspacesWithStats);
 
   } catch (error) {
     console.error('Get workspaces error:', error);
-    res.status(500).json({
-      error: error.message || 'Internal server error'
-    });
+    return sendError(res, 500, error.message || 'Internal server error');
   }
 };
 
@@ -133,23 +123,29 @@ const getWorkspace = async (req, res) => {
     
     const workspace = await Workspace.findById(workspaceId);
     if (!workspace) {
-      return res.status(404).json({
-        success: false,
-        error: 'Workspace not found'
-      });
+      return sendError(res, 404, 'Workspace not found');
     }
 
-    res.json({
-      success: true,
-      data: workspace.toJSON()
+    const members = await workspace.getMembers();
+    workspace.members = members.map(member => ({
+      id: member.id,
+      firstName: member.first_name,
+      lastName: member.last_name,
+      email: member.email,
+      avatarUrl: member.avatar_url,
+      role: member.role,
+      joinedAt: member.joined_at
+    }));
+
+    return sendSuccess(res, workspace.toJSON(), {
+      meta: {
+        userRole: req.userRole
+      }
     });
 
   } catch (error) {
     console.error('Get workspace error:', error);
-    res.status(500).json({
-      success: false,
-      error: 'Internal server error'
-    });
+    return sendError(res, 500, 'Internal server error');
   }
 };
 
@@ -161,26 +157,18 @@ const updateWorkspace = async (req, res) => {
     
     const workspace = await Workspace.findById(workspaceId);
     if (!workspace) {
-      return res.status(404).json({
-        success: false,
-        error: 'Workspace not found'
-      });
+      return sendError(res, 404, 'Workspace not found');
     }
 
     await workspace.update(updates);
 
-    res.json({
-      success: true,
-      message: 'Workspace updated successfully',
-      data: workspace.toJSON()
+    return sendSuccess(res, workspace.toJSON(), {
+      message: 'Workspace updated successfully'
     });
 
   } catch (error) {
     console.error('Update workspace error:', error);
-    res.status(500).json({
-      success: false,
-      error: 'Internal server error'
-    });
+    return sendError(res, 500, 'Internal server error');
   }
 };
 
@@ -192,51 +180,39 @@ const inviteMember = async (req, res) => {
 
     const workspace = await Workspace.findById(workspaceId);
     if (!workspace) {
-      return res.status(404).json({
-        success: false,
-        error: 'Workspace not found'
-      });
+      return sendError(res, 404, 'Workspace not found');
     }
 
     // Find user by email
     const userToInvite = await User.findByEmail(email);
     if (!userToInvite) {
-      return res.status(404).json({
-        success: false,
-        error: 'User not found'
-      });
+      return sendError(res, 404, 'User not found');
     }
 
     // Check if already a member
     const existingRole = await workspace.isMember(userToInvite.id);
     if (existingRole) {
-      return res.status(400).json({
-        success: false,
-        error: 'User is already a member of this workspace'
-      });
+      return sendError(res, 400, 'User is already a member of this workspace');
     }
 
     // Add member
     await workspace.addMember(userToInvite.id, role);
+    await Activity.logMemberActivity(workspaceId, req.authenticatedUser.id, 'invited', userToInvite);
 
-    res.status(201).json({
-      success: true,
-      message: 'Member invited successfully',
-      data: {
+    return sendSuccess(res, {
         id: userToInvite.id,
         firstName: userToInvite.firstName,
         lastName: userToInvite.lastName,
         email: userToInvite.email,
         role
-      }
+    }, {
+      status: 201,
+      message: 'Member invited successfully'
     });
 
   } catch (error) {
     console.error('Invite member error:', error);
-    res.status(500).json({
-      success: false,
-      error: 'Internal server error'
-    });
+    return sendError(res, 500, 'Internal server error');
   }
 };
 
@@ -248,42 +224,33 @@ const updateMemberRole = async (req, res) => {
 
     const workspace = await Workspace.findById(workspaceId);
     if (!workspace) {
-      return res.status(404).json({
-        success: false,
-        error: 'Workspace not found'
-      });
+      return sendError(res, 404, 'Workspace not found');
     }
 
     // Check if target user is a member
     const currentRole = await workspace.isMember(memberId);
     if (!currentRole) {
-      return res.status(404).json({
-        success: false,
-        error: 'User is not a member of this workspace'
-      });
+      return sendError(res, 404, 'User is not a member of this workspace');
     }
 
     // Prevent changing owner's role
     if (currentRole === 'owner') {
-      return res.status(403).json({
-        success: false,
-        error: 'Cannot change the role of the workspace owner'
-      });
+      return sendError(res, 403, 'Cannot change the role of the workspace owner');
     }
 
     await workspace.updateMemberRole(memberId, role);
+    const targetUser = await User.findById(memberId);
+    if (targetUser) {
+      await Activity.logMemberActivity(workspaceId, req.authenticatedUser.id, `changed role to ${role}`, targetUser);
+    }
 
-    res.json({
-      success: true,
+    return sendSuccess(res, null, {
       message: 'Member role updated successfully'
     });
 
   } catch (error) {
     console.error('Update member role error:', error);
-    res.status(500).json({
-      success: false,
-      error: 'Internal server error'
-    });
+    return sendError(res, 500, 'Internal server error');
   }
 };
 
@@ -294,42 +261,33 @@ const removeMember = async (req, res) => {
 
     const workspace = await Workspace.findById(workspaceId);
     if (!workspace) {
-      return res.status(404).json({
-        success: false,
-        error: 'Workspace not found'
-      });
+      return sendError(res, 404, 'Workspace not found');
     }
 
     // Check if target user is a member
     const currentRole = await workspace.isMember(memberId);
     if (!currentRole) {
-      return res.status(404).json({
-        success: false,
-        error: 'User is not a member of this workspace'
-      });
+      return sendError(res, 404, 'User is not a member of this workspace');
     }
 
     // Prevent removing owner
     if (currentRole === 'owner') {
-      return res.status(403).json({
-        success: false,
-        error: 'Cannot remove the workspace owner'
-      });
+      return sendError(res, 403, 'Cannot remove the workspace owner');
     }
 
+    const targetUser = await User.findById(memberId);
     await workspace.removeMember(memberId);
+    if (targetUser) {
+      await Activity.logMemberActivity(workspaceId, req.authenticatedUser.id, 'removed', targetUser);
+    }
 
-    res.json({
-      success: true,
+    return sendSuccess(res, null, {
       message: 'Member removed successfully'
     });
 
   } catch (error) {
     console.error('Remove member error:', error);
-    res.status(500).json({
-      success: false,
-      error: 'Internal server error'
-    });
+    return sendError(res, 500, 'Internal server error');
   }
 };
 

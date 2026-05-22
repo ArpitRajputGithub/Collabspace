@@ -80,6 +80,20 @@ class Project {
     }
   }
 
+  static async findWorkspaceId(projectId) {
+    const client = await pool.connect();
+    try {
+      const result = await client.query(
+        'SELECT workspace_id FROM projects WHERE id = $1 AND is_active = true',
+        [projectId]
+      );
+
+      return result.rows[0]?.workspace_id || null;
+    } finally {
+      client.release();
+    }
+  }
+
   // Get projects by workspace
   static async findByWorkspace(workspaceId) {
     const client = await pool.connect();
@@ -118,7 +132,7 @@ class Project {
     try {
       const query = `
         UPDATE projects 
-        SET name = $1, description = $2, color = $3, start_date = $4, end_date = $5, status = $6
+        SET name = $1, description = $2, color = $3, start_date = $4, end_date = $5, status = $6, updated_at = NOW()
         WHERE id = $7
         RETURNING *
       `;
@@ -192,13 +206,13 @@ class Project {
 
       // Soft delete all tasks in project
       await client.query(
-        'UPDATE tasks SET is_active = false WHERE project_id = $1',
+        'UPDATE tasks SET is_active = false, updated_at = NOW() WHERE project_id = $1',
         [this.id]
       );
 
       // Soft delete project
       await client.query(
-        'UPDATE projects SET is_active = false WHERE id = $1',
+        'UPDATE projects SET is_active = false, updated_at = NOW() WHERE id = $1',
         [this.id]
       );
 

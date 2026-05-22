@@ -1,5 +1,22 @@
 const jwt = require('jsonwebtoken');
 const User = require('../models/user');
+const Project = require('../models/project');
+const Workspace = require('../models/workspace');
+
+const userCanAccessWorkspace = async (userId, workspaceId) => {
+  const workspace = await Workspace.findById(workspaceId);
+  if (!workspace) return false;
+
+  const role = await workspace.isMember(userId);
+  return Boolean(role);
+};
+
+const userCanAccessProject = async (userId, projectId) => {
+  const workspaceId = await Project.findWorkspaceId(projectId);
+  if (!workspaceId) return false;
+
+  return userCanAccessWorkspace(userId, workspaceId);
+};
 
 // Socket.io authentication middleware (JWT only)
 const authenticateSocket = async (socket, next) => {
@@ -53,7 +70,13 @@ const socketHandlers = (io) => {
     socket.join(`user:${socket.userId}`);
 
     // Handle joining project rooms
-    socket.on('join-project', ({ projectId }) => {
+    socket.on('join-project', async ({ projectId }) => {
+      const allowed = await userCanAccessProject(socket.userId, projectId);
+      if (!allowed) {
+        socket.emit('project-access-denied', { projectId });
+        return;
+      }
+
       socket.join(`project:${projectId}`);
       socket.currentProject = projectId;
       console.log(`User ${socket.user.firstName} joined project ${projectId}`);
@@ -81,7 +104,13 @@ const socketHandlers = (io) => {
     });
 
     // Handle workspace rooms
-    socket.on('join-workspace', ({ workspaceId }) => {
+    socket.on('join-workspace', async ({ workspaceId }) => {
+      const allowed = await userCanAccessWorkspace(socket.userId, workspaceId);
+      if (!allowed) {
+        socket.emit('workspace-access-denied', { workspaceId });
+        return;
+      }
+
       socket.join(`workspace:${workspaceId}`);
       socket.currentWorkspace = workspaceId;
       console.log(`User ${socket.user.firstName} joined workspace ${workspaceId}`);
@@ -153,6 +182,17 @@ const socketHandlers = (io) => {
     socket.on('message-sent', async ({ projectId, content }) => {
       try {
         const Message = require('../models/Message');
+
+        const allowed = await userCanAccessProject(socket.userId, projectId);
+        if (!allowed) {
+          socket.emit('message-error', { error: 'You do not have access to this project' });
+          return;
+        }
+
+        if (!content || !content.trim()) {
+          socket.emit('message-error', { error: 'Message content is required' });
+          return;
+        }
         
         // Save message to MongoDB
         const savedMessage = await Message.createMessage({
@@ -164,7 +204,7 @@ const socketHandlers = (io) => {
             email: socket.user.email,
             avatarUrl: socket.user.avatarUrl
           },
-          content,
+          content: content.trim(),
           messageType: 'text'
         });
         

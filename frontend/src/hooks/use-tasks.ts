@@ -88,11 +88,11 @@ export function useTasks(projectId: string) {
     })
 
     // Task updated
-    socket.on('task-updated', (data: TaskUpdate) => {
+    socket.on('task-updated', (data: TaskUpdate & { task?: Task }) => {
       setOptimisticTasks(prev =>
         prev.map(task =>
           task.id === data.taskId
-            ? { ...task, ...data.changes }
+            ? (data.task ? { ...task, ...data.task } : { ...task, ...data.changes })
             : task
         )
       )

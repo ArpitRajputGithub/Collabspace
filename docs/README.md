@@ -1,6 +1,6 @@
 # 🚀 CollabSpace - Real-time Team Collaboration Platform
 
-A modern, full-stack team collaboration platform built with Next.js 15, Node.js, and real-time WebSocket integration. Features include Kanban boards, task management, live collaboration, and much more.
+A modern, full-stack team collaboration platform built with Next.js App Router, Node.js, and real-time WebSocket integration. Features include Kanban boards, task management, live collaboration, and much more.
 
 ## ✨ Features
 
@@ -17,8 +17,7 @@ A modern, full-stack team collaboration platform built with Next.js 15, Node.js,
 - **Activity Feeds** with real-time notifications
 
 ### 🔐 **Authentication & Security**
-- **Modern Authentication** with Clerk integration
-- **JWT-based API** security
+- **JWT-based authentication** and API security
 - **Role-based Access Control**
 - **Protected Routes** and middleware
 
@@ -31,7 +30,7 @@ A modern, full-stack team collaboration platform built with Next.js 15, Node.js,
 ## 🛠️ Tech Stack
 
 ### **Frontend**
-- **Next.js 15** - React framework with App Router
+- **Next.js App Router** - React framework
 - **TypeScript** - Type safety and better DX  
 - **Tailwind CSS** - Utility-first styling
 - **shadcn/ui** - Beautiful, accessible components
@@ -42,12 +41,11 @@ A modern, full-stack team collaboration platform built with Next.js 15, Node.js,
 
 ### **Backend**
 - **Node.js** with Express.js
-- **TypeScript** - Full-stack type safety
-- **Prisma ORM** - Database management  
-- **PostgreSQL** - Primary database
+- **PostgreSQL via `pg`** - Primary database
+- **MongoDB via Mongoose** - Project chat messages
 - **Socket.io** - Real-time communication
 - **JWT** - Authentication tokens
-- **Clerk** - User management
+- **Joi** - Request validation
 
 ### **Deployment & DevOps**
 - **Vercel** - Frontend deployment
@@ -60,6 +58,6 @@ A modern, full-stack team collaboration platform built with Next.js 15, Node.js,
 ### Prerequisites
 - Node.js 18+ 
 - PostgreSQL database
-- Clerk account for authentication
+- MongoDB database
 
 ### 1. Clone the Repository

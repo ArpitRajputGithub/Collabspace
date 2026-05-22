@@ -3,6 +3,7 @@ const router = express.Router();
 const projectController = require('../controllers/projectController');
 const { authenticateToken } = require('../middleware/auth');
 const { isMember } = require('../middleware/rbac');
+const { requireProjectAccess } = require('../middleware/projectAccess');
 const { validateCreateProject } = require('../middleware/validation');
 
 // All routes require JWT authentication
@@ -13,9 +14,9 @@ router.post('/workspace/:workspaceId', isMember, validateCreateProject, projectC
 router.get('/workspace/:workspaceId', isMember, projectController.getWorkspaceProjects);
 
 // Individual project routes
-router.get('/:projectId', projectController.getProject);
-router.get('/:projectId/board', projectController.getProjectBoard);
-router.put('/:projectId', projectController.updateProject);
-router.delete('/:projectId', projectController.deleteProject);
+router.get('/:projectId', requireProjectAccess, projectController.getProject);
+router.get('/:projectId/board', requireProjectAccess, projectController.getProjectBoard);
+router.put('/:projectId', requireProjectAccess, projectController.updateProject);
+router.delete('/:projectId', requireProjectAccess, projectController.deleteProject);
 
 module.exports = router;

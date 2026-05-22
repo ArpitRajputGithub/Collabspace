@@ -2,6 +2,8 @@ interface ApiResponse<T> {
   success: boolean
   data: T
   message?: string
+  meta?: Record<string, unknown>
+  error?: string
 }
 
 interface User {
@@ -99,7 +101,7 @@ class ApiClient {
     console.log('API Base URL:', this.baseUrl)
   }
 
-  setToken(token: string) {
+  setToken(token: string | null) {
     this.token = token
     console.log('API client token set:', token ? 'Token available' : 'No token')
   }
@@ -256,10 +258,9 @@ class ApiClient {
     }
 
     const rawResponse = await response.json()
-    // rawResponse is { success: true, data: Workspace, userRole: string }
     return {
       data: rawResponse.data,
-      userRole: rawResponse.userRole || 'member'
+      userRole: rawResponse.meta?.userRole || 'member'
     } as WorkspaceDetailResponse
   }
 
@@ -288,9 +289,7 @@ class ApiClient {
   // Project methods
   async getWorkspaceProjects(workspaceId: string): Promise<Project[]> {
     const response = await this.request<{ projects: Project[] }>(`/projects/workspace/${workspaceId}`)
-    // Backend returns { success: true, data: { projects: [...] } }
-    const data = response.data as { projects: Project[] }
-    return data.projects
+    return response.data.projects
   }
 
   async createProject(workspaceId: string, data: {
@@ -308,9 +307,7 @@ class ApiClient {
       method: 'POST',
       body: JSON.stringify(data),
     })
-    // Backend returns { message: "...", project: {...} }
-    // The request method returns the JSON directly, so response is already the object
-    return (response as any).project
+    return response.data.project
   }
 
   async getProject(projectId: string): Promise<ProjectDetailResponse> {

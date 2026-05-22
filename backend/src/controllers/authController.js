@@ -1,6 +1,7 @@
 const User = require('../models/user')
 const bcrypt = require('bcryptjs')
 const jwt = require('jsonwebtoken')
+const { sendSuccess, sendError } = require('../utils/apiResponse')
 
 const authController = {
   // Register new user with JWT
@@ -11,10 +12,7 @@ const authController = {
       // Check if user already exists
       const existingUser = await User.findByEmail(email)
       if (existingUser) {
-        return res.status(409).json({
-          success: false,
-          error: 'User with this email already exists'
-        })
+        return sendError(res, 409, 'User with this email already exists')
       }
 
       // Create user
@@ -32,21 +30,17 @@ const authController = {
         { expiresIn: process.env.JWT_EXPIRES_IN || '24h' }
       )
 
-      res.status(201).json({
-        success: true,
-        message: 'User registered successfully',
-        data: {
+      return sendSuccess(res, {
           user: user.toJSON(),
           token
-        }
+      }, {
+        status: 201,
+        message: 'User registered successfully'
       })
 
     } catch (error) {
       console.error('Register error:', error)
-      res.status(500).json({
-        success: false,
-        error: 'Internal server error'
-      })
+      return sendError(res, 500, 'Internal server error')
     }
   },
 
@@ -58,19 +52,13 @@ const authController = {
       // Find user by email
       const user = await User.findByEmail(email)
       if (!user) {
-        return res.status(401).json({
-          success: false,
-          error: 'Invalid email or password'
-        })
+        return sendError(res, 401, 'Invalid email or password')
       }
 
       // Verify password
       const isValidPassword = await user.verifyPassword(password)
       if (!isValidPassword) {
-        return res.status(401).json({
-          success: false,
-          error: 'Invalid email or password'
-        })
+        return sendError(res, 401, 'Invalid email or password')
       }
 
       // Update last login
@@ -83,34 +71,27 @@ const authController = {
         { expiresIn: process.env.JWT_EXPIRES_IN || '24h' }
       )
 
-      res.json({
-        success: true,
-        message: 'Login successful',
-        data: {
+      return sendSuccess(res, {
           user: user.toJSON(),
           token
-        }
+      }, {
+        message: 'Login successful'
       })
 
     } catch (error) {
       console.error('Login error:', error)
-      res.status(500).json({
-        success: false,
-        error: 'Internal server error'
-      })
+      return sendError(res, 500, 'Internal server error')
     }
   },
 
-  // Refresh JWT token
+  // Renew a JWT access token. This uses the existing token until a persisted
+  // refresh-token model exists.
   refresh: async (req, res) => {
     try {
-      const { refreshToken } = req.body
+      const refreshToken = req.body.refreshToken || req.body.token
       
       if (!refreshToken) {
-        return res.status(401).json({
-          success: false,
-          error: 'Refresh token required'
-        })
+        return sendError(res, 401, 'Token required')
       }
 
       // Verify refresh token
@@ -118,10 +99,7 @@ const authController = {
       const user = await User.findById(decoded.id)
       
       if (!user) {
-        return res.status(401).json({
-          success: false,
-          error: 'User not found'
-        })
+        return sendError(res, 401, 'User not found')
       }
 
       // Generate new access token
@@ -131,19 +109,15 @@ const authController = {
         { expiresIn: process.env.JWT_EXPIRES_IN || '24h' }
       )
 
-      res.json({
-        success: true,
-        data: {
-          token: newToken
-        }
+      return sendSuccess(res, {
+        token: newToken
+      }, {
+        message: 'Token renewed successfully'
       })
 
     } catch (error) {
       console.error('Refresh token error:', error)
-      res.status(401).json({
-        success: false,
-        error: 'Invalid refresh token'
-      })
+      return sendError(res, 401, 'Invalid token')
     }
   },
 
@@ -154,10 +128,7 @@ const authController = {
       const user = await User.findById(req.user.id)
       
       if (!user) {
-        return res.status(404).json({
-          success: false,
-          error: 'User not found'
-        })
+        return sendError(res, 404, 'User not found')
       }
 
       // Get user's workspaces
@@ -168,20 +139,14 @@ const authController = {
         console.error('Error fetching workspaces:', workspaceError)
       }
 
-      res.json({
-        success: true,
-        data: {
+      return sendSuccess(res, {
           ...user.toJSON(),
           workspaces: workspaces || []
-        }
       })
 
     } catch (error) {
       console.error('Get profile error:', error)
-      res.status(500).json({
-        success: false,
-        error: 'Internal server error'
-      })
+      return sendError(res, 500, 'Internal server error')
     }
   }
 }

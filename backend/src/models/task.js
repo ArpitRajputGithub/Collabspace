@@ -96,7 +96,7 @@ class Task {
         slug: taskData.status_slug,
         color: taskData.status_color
       };
-      task.assignee = assigneeId ? {
+      task.assignee = task.assigneeId ? {
         id: task.assigneeId,
         name: taskData.assignee_name,
         email: taskData.assignee_email
@@ -197,6 +197,8 @@ class Task {
           updateFields.push(`completed_at = NULL`);
         }
       }
+
+      updateFields.push('updated_at = NOW()');
       
       values.push(this.id);
       
@@ -254,7 +256,7 @@ class Task {
 
       // Update this task
       await client.query(
-        'UPDATE tasks SET status_id = $1, position = $2 WHERE id = $3',
+        'UPDATE tasks SET status_id = $1, position = $2, updated_at = NOW() WHERE id = $3',
         [newStatusId, newPosition, this.id]
       );
 
@@ -334,7 +336,7 @@ class Task {
     const client = await pool.connect();
     try {
       await client.query(
-        'UPDATE tasks SET is_active = false WHERE id = $1',
+        'UPDATE tasks SET is_active = false, updated_at = NOW() WHERE id = $1',
         [this.id]
       );
       
