@@ -37,6 +37,15 @@ interface RegisterData {
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:9000/api'
+const AUTH_COOKIE_MAX_AGE = 60 * 60 * 24
+
+const writeAuthCookie = (token: string) => {
+  document.cookie = `auth_token=${token}; path=/; max-age=${AUTH_COOKIE_MAX_AGE}; SameSite=Lax`
+}
+
+const clearAuthCookie = () => {
+  document.cookie = 'auth_token=; path=/; max-age=0; SameSite=Lax'
+}
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
@@ -83,6 +92,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const { token: newToken, user: userData } = data.data
       localStorage.setItem('auth_token', newToken)
       localStorage.setItem('auth_user', JSON.stringify(userData))
+      writeAuthCookie(newToken)
       setToken(newToken)
       apiClient.setToken(newToken) // Sync token to api-client
       setUser(userData)
@@ -115,6 +125,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const { token: newToken, user: userData } = data.data
       localStorage.setItem('auth_token', newToken)
       localStorage.setItem('auth_user', JSON.stringify(userData))
+      writeAuthCookie(newToken)
       setToken(newToken)
       apiClient.setToken(newToken) // Sync token to api-client
       setUser(userData)
@@ -130,7 +141,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const logout = useCallback(() => {
     localStorage.removeItem('auth_token')
     localStorage.removeItem('auth_user')
+    clearAuthCookie()
     setToken(null)
+    apiClient.setToken(null)
     setUser(null)
     router.push('/sign-in')
   }, [router])
@@ -158,7 +171,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       const newToken = data.data.token
       localStorage.setItem('auth_token', newToken)
+      writeAuthCookie(newToken)
       setToken(newToken)
+      apiClient.setToken(newToken)
       return true
     } catch (error) {
       console.error('Token refresh error:', error)

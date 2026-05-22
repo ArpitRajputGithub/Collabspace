@@ -1,14 +1,12 @@
 const { pool } = require('../config/database');
+const { sendSuccess, sendError } = require('../utils/apiResponse');
 
 // Get dashboard statistics for the authenticated user
 const getDashboardStats = async (req, res) => {
   try {
     // Get user from JWT auth
     if (!req.user || !req.user.id) {
-      return res.status(401).json({
-        success: false,
-        error: 'Authentication required'
-      });
+      return sendError(res, 401, 'Authentication required');
     }
     const userId = req.user.id;
 
@@ -70,9 +68,7 @@ const getDashboardStats = async (req, res) => {
       const completedResult = await client.query(completedQuery, [userId]);
       const completedTasks = parseInt(completedResult.rows[0].count) || 0;
 
-      res.json({
-        success: true,
-        data: {
+      return sendSuccess(res, {
           activeTodayCount,
           weeklyActionsCount,
           totalAssignedTasks,
@@ -80,7 +76,6 @@ const getDashboardStats = async (req, res) => {
           completionRate: totalAssignedTasks > 0 
             ? Math.round((completedTasks / totalAssignedTasks) * 100) 
             : 0
-        }
       });
 
     } finally {
@@ -89,10 +84,7 @@ const getDashboardStats = async (req, res) => {
 
   } catch (error) {
     console.error('Get dashboard stats error:', error);
-    res.status(500).json({
-      success: false,
-      error: 'Internal server error while fetching dashboard statistics'
-    });
+    return sendError(res, 500, 'Internal server error while fetching dashboard statistics');
   }
 };
 

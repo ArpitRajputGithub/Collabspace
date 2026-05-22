@@ -1,19 +1,22 @@
 const Task = require('../models/task');
 const Project = require('../models/project');
+const Activity = require('../models/activity');
+const { sendSuccess, sendError } = require('../utils/apiResponse');
+
+const getActor = (req) => req.authenticatedUser || req.user;
 
 // Create new task
 const createTask = async (req, res) => {
   try {
     const { title, description, assigneeId, priority, dueDate, labels, estimatedHours } = req.body;
     const { projectId } = req.params;
-    const createdBy = req.user.id;
+    const actor = getActor(req);
+    const createdBy = actor.id;
 
     // Verify project exists and user has access
     const project = await Project.findById(projectId);
     if (!project) {
-      return res.status(404).json({
-        error: 'Project not found'
-      });
+      return sendError(res, 404, 'Project not found');
     }
 
     const task = await Task.create({
@@ -30,15 +33,16 @@ const createTask = async (req, res) => {
 
     // Get task with related data for response
     const taskWithData = await Task.findById(task.id);
+    await Activity.logTaskActivity(project.workspaceId, createdBy, 'created', taskWithData);
 
-    // Emit real-time event (we'll implement this next)
-    req.io.to(`project:${projectId}`).emit('taskCreated', {
+    // Emit real-time event for connected project collaborators.
+    req.io.to(`project:${projectId}`).emit('task-created', {
       task: taskWithData,
+      createdBy: actor,
       projectId
     });
 
-    res.status(201).json({
-      message: 'Task created successfully',
+    return sendSuccess(res, {
       task: {
         id: taskWithData.id,
         title: taskWithData.title,
@@ -50,13 +54,14 @@ const createTask = async (req, res) => {
         assignee: taskWithData.assignee,
         createdAt: taskWithData.createdAt
       }
+    }, {
+      status: 201,
+      message: 'Task created successfully',
     });
 
   } catch (error) {
     console.error('Create task error:', error);
-    res.status(500).json({
-      error: 'Internal server error while creating task'
-    });
+    return sendError(res, 500, 'Internal server error while creating task');
   }
 };
 
@@ -65,17 +70,15 @@ const getTask = async (req, res) => {
   try {
     const { taskId } = req.params;
     
-    const task = await Task.findById(taskId);
+    const task = req.task || await Task.findById(taskId);
     if (!task) {
-      return res.status(404).json({
-        error: 'Task not found'
-      });
+      return sendError(res, 404, 'Task not found');
     }
 
     // Get task comments
     const comments = await task.getComments();
 
-    res.json({
+    return sendSuccess(res, {
       task: {
         id: task.id,
         title: task.title,
@@ -92,14 +95,12 @@ const getTask = async (req, res) => {
         createdAt: task.createdAt,
         updatedAt: task.updatedAt
       },
-      comments: comments
+      comments
     });
 
   } catch (error) {
     console.error('Get task error:', error);
-    res.status(500).json({
-      error: 'Internal server error'
-    });
+    return sendError(res, 500, 'Internal server error');
   }
 };
 
@@ -109,27 +110,28 @@ const updateTask = async (req, res) => {
     const { taskId } = req.params;
     const updates = req.body;
     
-    const task = await Task.findById(taskId);
+    const actor = getActor(req);
+    const task = req.task || await Task.findById(taskId);
     if (!task) {
-      return res.status(404).json({
-        error: 'Task not found'
-      });
+      return sendError(res, 404, 'Task not found');
     }
 
     await task.update(updates);
     
     // Get updated task with related data
     const updatedTask = await Task.findById(taskId);
+    await Activity.logTaskActivity(req.workspace.id, actor.id, 'updated', updatedTask);
 
     // Emit real-time event
-    req.io.to(`project:${task.projectId}`).emit('taskUpdated', {
+    req.io.to(`project:${task.projectId}`).emit('task-updated', {
+      taskId: updatedTask.id,
       task: updatedTask,
       changes: updates,
-      updatedBy: req.user.id
+      updatedBy: actor,
+      projectId: task.projectId
     });
 
-    res.json({
-      message: 'Task updated successfully',
+    return sendSuccess(res, {
       task: {
         id: updatedTask.id,
         title: updatedTask.title,
@@ -141,13 +143,13 @@ const updateTask = async (req, res) => {
         assignee: updatedTask.assignee,
         updatedAt: updatedTask.updatedAt
       }
+    }, {
+      message: 'Task updated successfully',
     });
 
   } catch (error) {
     console.error('Update task error:', error);
-    res.status(500).json({
-      error: 'Internal server error'
-    });
+    return sendError(res, 500, 'Internal server error');
   }
 };
 
@@ -157,41 +159,41 @@ const moveTask = async (req, res) => {
     const { taskId } = req.params;
     const { statusId, position } = req.body;
     
-    const task = await Task.findById(taskId);
+    const actor = getActor(req);
+    const task = req.task || await Task.findById(taskId);
     if (!task) {
-      return res.status(404).json({
-        error: 'Task not found'
-      });
+      return sendError(res, 404, 'Task not found');
     }
 
     await task.updatePosition(statusId, position);
     
     // Get updated task
     const updatedTask = await Task.findById(taskId);
+    await Activity.logTaskActivity(req.workspace.id, actor.id, 'moved', updatedTask);
 
     // Emit real-time event for board synchronization
-    req.io.to(`project:${task.projectId}`).emit('taskMoved', {
+    req.io.to(`project:${task.projectId}`).emit('task-moved', {
       taskId: task.id,
       oldStatusId: task.statusId,
       newStatusId: statusId,
       newPosition: position,
-      movedBy: req.user.id
+      movedBy: actor,
+      projectId: task.projectId
     });
 
-    res.json({
-      message: 'Task moved successfully',
+    return sendSuccess(res, {
       task: {
         id: updatedTask.id,
         statusId: updatedTask.statusId,
         position: updatedTask.position
       }
+    }, {
+      message: 'Task moved successfully',
     });
 
   } catch (error) {
     console.error('Move task error:', error);
-    res.status(500).json({
-      error: 'Internal server error'
-    });
+    return sendError(res, 500, 'Internal server error');
   }
 };
 
@@ -200,13 +202,11 @@ const addTaskComment = async (req, res) => {
   try {
     const { taskId } = req.params;
     const { content, mentions = [] } = req.body;
-    const userId = req.user.id;
+    const userId = getActor(req).id;
     
-    const task = await Task.findById(taskId);
+    const task = req.task || await Task.findById(taskId);
     if (!task) {
-      return res.status(404).json({
-        error: 'Task not found'
-      });
+      return sendError(res, 404, 'Task not found');
     }
 
     const comment = await task.addComment(userId, content, mentions);
@@ -214,23 +214,25 @@ const addTaskComment = async (req, res) => {
     // Get comment with author data
     const comments = await task.getComments();
     const newComment = comments.find(c => c.id === comment.id);
+    await Activity.logCommentActivity(req.workspace.id, userId, 'commented', task);
 
     // Emit real-time event
-    req.io.to(`project:${task.projectId}`).emit('taskCommentAdded', {
+    req.io.to(`project:${task.projectId}`).emit('task-comment-added', {
       taskId: task.id,
-      comment: newComment
+      comment: newComment,
+      projectId: task.projectId
     });
 
-    res.status(201).json({
-      message: 'Comment added successfully',
+    return sendSuccess(res, {
       comment: newComment
+    }, {
+      status: 201,
+      message: 'Comment added successfully',
     });
 
   } catch (error) {
     console.error('Add task comment error:', error);
-    res.status(500).json({
-      error: 'Internal server error'
-    });
+    return sendError(res, 500, 'Internal server error');
   }
 };
 
@@ -239,24 +241,20 @@ const getTaskComments = async (req, res) => {
   try {
     const { taskId } = req.params;
     
-    const task = await Task.findById(taskId);
+    const task = req.task || await Task.findById(taskId);
     if (!task) {
-      return res.status(404).json({
-        error: 'Task not found'
-      });
+      return sendError(res, 404, 'Task not found');
     }
 
     const comments = await task.getComments();
 
-    res.json({
-      comments: comments
+    return sendSuccess(res, {
+      comments
     });
 
   } catch (error) {
     console.error('Get task comments error:', error);
-    res.status(500).json({
-      error: 'Internal server error'
-    });
+    return sendError(res, 500, 'Internal server error');
   }
 };
 
@@ -265,31 +263,29 @@ const deleteTask = async (req, res) => {
   try {
     const { taskId } = req.params;
     
-    const task = await Task.findById(taskId);
+    const actor = getActor(req);
+    const task = req.task || await Task.findById(taskId);
     if (!task) {
-      return res.status(404).json({
-        error: 'Task not found'
-      });
+      return sendError(res, 404, 'Task not found');
     }
 
     await task.delete();
+    await Activity.logTaskActivity(req.workspace.id, actor.id, 'deleted', task);
 
     // Emit real-time event
-    req.io.to(`project:${task.projectId}`).emit('taskDeleted', {
+    req.io.to(`project:${task.projectId}`).emit('task-deleted', {
       taskId: task.id,
       projectId: task.projectId,
-      deletedBy: req.user.id
+      deletedBy: actor
     });
 
-    res.json({
+    return sendSuccess(res, null, {
       message: 'Task deleted successfully'
     });
 
   } catch (error) {
     console.error('Delete task error:', error);
-    res.status(500).json({
-      error: 'Internal server error'
-    });
+    return sendError(res, 500, 'Internal server error');
   }
 };
 

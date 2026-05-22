@@ -1,5 +1,7 @@
 const Project = require('../models/project');
 const Task = require('../models/task');
+const Activity = require('../models/activity');
+const { sendSuccess, sendError } = require('../utils/apiResponse');
 
 // Create new project
 const createProject = async (req, res) => {
@@ -10,9 +12,7 @@ const createProject = async (req, res) => {
     const createdBy = req.authenticatedUser ? req.authenticatedUser.id : req.user?.id;
     
     if (!createdBy) {
-      return res.status(401).json({
-        error: 'Authentication required'
-      });
+      return sendError(res, 401, 'Authentication required');
     }
 
     const project = await Project.create({
@@ -25,8 +25,9 @@ const createProject = async (req, res) => {
       endDate
     });
 
-    res.status(201).json({
-      message: 'Project created successfully',
+    await Activity.logProjectActivity(workspaceId, createdBy, 'created', project);
+
+    return sendSuccess(res, {
       project: {
         id: project.id,
         name: project.name,
@@ -37,13 +38,14 @@ const createProject = async (req, res) => {
         endDate: project.endDate,
         createdAt: project.createdAt
       }
+    }, {
+      status: 201,
+      message: 'Project created successfully'
     });
 
   } catch (error) {
     console.error('Create project error:', error);
-    res.status(500).json({
-      error: 'Internal server error while creating project'
-    });
+    return sendError(res, 500, 'Internal server error while creating project');
   }
 };
 
@@ -54,7 +56,7 @@ const getWorkspaceProjects = async (req, res) => {
     
     const projects = await Project.findByWorkspace(workspaceId);
 
-    res.json({
+    return sendSuccess(res, {
       projects: projects.map(project => ({
         id: project.id,
         name: project.name,
@@ -72,9 +74,7 @@ const getWorkspaceProjects = async (req, res) => {
 
   } catch (error) {
     console.error('Get workspace projects error:', error);
-    res.status(500).json({
-      error: 'Internal server error'
-    });
+    return sendError(res, 500, 'Internal server error');
   }
 };
 
@@ -85,9 +85,7 @@ const getProject = async (req, res) => {
     
     const project = await Project.findById(projectId);
     if (!project) {
-      return res.status(404).json({
-        error: 'Project not found'
-      });
+      return sendError(res, 404, 'Project not found');
     }
 
     // Get project statistics and task statuses
@@ -96,7 +94,7 @@ const getProject = async (req, res) => {
       project.getTaskStatuses()
     ]);
 
-    res.json({
+    return sendSuccess(res, {
       project: {
         id: project.id,
         name: project.name,
@@ -128,9 +126,7 @@ const getProject = async (req, res) => {
 
   } catch (error) {
     console.error('Get project error:', error);
-    res.status(500).json({
-      error: 'Internal server error'
-    });
+    return sendError(res, 500, 'Internal server error');
   }
 };
 
@@ -142,9 +138,7 @@ const getProjectBoard = async (req, res) => {
     // Verify project exists and user has access (done by middleware)
     const project = await Project.findById(projectId);
     if (!project) {
-      return res.status(404).json({
-        error: 'Project not found'
-      });
+      return sendError(res, 404, 'Project not found');
     }
 
     const [tasks, taskStatuses] = await Promise.all([
@@ -161,7 +155,7 @@ const getProjectBoard = async (req, res) => {
       return acc;
     }, {});
 
-    res.json({
+    return sendSuccess(res, {
       project: {
         id: project.id,
         name: project.name,
@@ -190,9 +184,7 @@ const getProjectBoard = async (req, res) => {
 
   } catch (error) {
     console.error('Get project board error:', error);
-    res.status(500).json({
-      error: 'Internal server error'
-    });
+    return sendError(res, 500, 'Internal server error');
   }
 };
 
@@ -204,15 +196,14 @@ const updateProject = async (req, res) => {
     
     const project = await Project.findById(projectId);
     if (!project) {
-      return res.status(404).json({
-        error: 'Project not found'
-      });
+      return sendError(res, 404, 'Project not found');
     }
 
     await project.update(updates);
 
-    res.json({
-      message: 'Project updated successfully',
+    await Activity.logProjectActivity(project.workspaceId, req.user.id, 'updated', project);
+
+    return sendSuccess(res, {
       project: {
         id: project.id,
         name: project.name,
@@ -223,13 +214,13 @@ const updateProject = async (req, res) => {
         endDate: project.endDate,
         updatedAt: project.updatedAt
       }
+    }, {
+      message: 'Project updated successfully'
     });
 
   } catch (error) {
     console.error('Update project error:', error);
-    res.status(500).json({
-      error: 'Internal server error'
-    });
+    return sendError(res, 500, 'Internal server error');
   }
 };
 
@@ -240,22 +231,19 @@ const deleteProject = async (req, res) => {
     
     const project = await Project.findById(projectId);
     if (!project) {
-      return res.status(404).json({
-        error: 'Project not found'
-      });
+      return sendError(res, 404, 'Project not found');
     }
 
+    await Activity.logProjectActivity(project.workspaceId, req.user.id, 'deleted', project);
     await project.delete();
 
-    res.json({
+    return sendSuccess(res, null, {
       message: 'Project deleted successfully'
     });
 
   } catch (error) {
     console.error('Delete project error:', error);
-    res.status(500).json({
-      error: 'Internal server error'
-    });
+    return sendError(res, 500, 'Internal server error');
   }
 };
 

@@ -1,13 +1,15 @@
 const express = require('express');
 const router = express.Router();
 const { authenticateToken } = require('../middleware/auth');
+const { requireProjectAccess } = require('../middleware/projectAccess');
 const Message = require('../models/Message');
+const { sendSuccess, sendError } = require('../utils/apiResponse');
 
 // All routes require authentication
 router.use(authenticateToken);
 
 // GET /api/projects/:projectId/messages - Get project messages with pagination
-router.get('/:projectId/messages', async (req, res) => {
+router.get('/:projectId/messages', requireProjectAccess, async (req, res) => {
   try {
     const { projectId } = req.params;
     const { limit = 50, before } = req.query;
@@ -20,42 +22,36 @@ router.get('/:projectId/messages', async (req, res) => {
     // Reverse to get oldest first for display
     messages.reverse();
     
-    res.json({
-      success: true,
-      data: messages,
-      count: messages.length,
-      hasMore: messages.length === parseInt(limit, 10)
+    return sendSuccess(res, messages, {
+      meta: {
+        count: messages.length,
+        hasMore: messages.length === parseInt(limit, 10)
+      }
     });
   } catch (error) {
     console.error('Error fetching messages:', error);
-    res.status(500).json({
-      success: false,
-      error: 'Failed to fetch messages'
-    });
+    return sendError(res, 500, 'Failed to fetch messages');
   }
 });
 
 // POST /api/projects/:projectId/messages - Send message via REST (fallback)
-router.post('/:projectId/messages', async (req, res) => {
+router.post('/:projectId/messages', requireProjectAccess, async (req, res) => {
   try {
     const { projectId } = req.params;
     const { content } = req.body;
     
     if (!content || !content.trim()) {
-      return res.status(400).json({
-        success: false,
-        error: 'Message content is required'
-      });
+      return sendError(res, 400, 'Message content is required');
     }
     
     const message = await Message.createMessage({
       projectId,
       userId: req.user.id,
       userInfo: {
-        firstName: req.user.firstName,
-        lastName: req.user.lastName,
-        email: req.user.email,
-        avatarUrl: req.user.avatarUrl
+        firstName: req.authenticatedUser.firstName,
+        lastName: req.authenticatedUser.lastName,
+        email: req.authenticatedUser.email,
+        avatarUrl: req.authenticatedUser.avatarUrl
       },
       content: content.trim(),
       messageType: 'text'
@@ -69,16 +65,12 @@ router.post('/:projectId/messages', async (req, res) => {
       });
     }
     
-    res.status(201).json({
-      success: true,
-      data: message
+    return sendSuccess(res, message, {
+      status: 201
     });
   } catch (error) {
     console.error('Error sending message:', error);
-    res.status(500).json({
-      success: false,
-      error: 'Failed to send message'
-    });
+    return sendError(res, 500, 'Failed to send message');
   }
 });
 

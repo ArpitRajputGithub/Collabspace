@@ -104,8 +104,8 @@ export function SocketProvider({ children }: { children: React.ReactNode }) {
           console.log(`Task ${taskId} updated by ${updatedBy.firstName}`)
         })
 
-        socketInstance.on('message-received', ({ channelId, message, sender }) => {
-          console.log(`New message in channel ${channelId} from ${sender.firstName}`)
+        socketInstance.on('message-received', ({ projectId, message }) => {
+          console.log(`New message in project ${projectId}:`, message._id)
         })
 
         setSocket(socketInstance)

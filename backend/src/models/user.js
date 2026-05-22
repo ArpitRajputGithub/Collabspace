@@ -84,7 +84,7 @@ class User {
   // Verify password (original method)
   async verifyPassword(password) {
     if (!this.passwordHash) {
-      return false; // Clerk users don't have passwords
+      return false;
     }
     return await bcrypt.compare(password, this.passwordHash);
   }

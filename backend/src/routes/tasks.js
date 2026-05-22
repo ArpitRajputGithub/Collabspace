@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const taskController = require('../controllers/taskController');
 const { authenticateToken } = require('../middleware/auth');
+const { requireProjectAccess, requireTaskAccess } = require('../middleware/projectAccess');
 const { 
   validateCreateTask, 
   validateUpdateTask, 
@@ -12,16 +13,16 @@ const {
 router.use(authenticateToken);
 
 // Task CRUD operations
-router.post('/project/:projectId', validateCreateTask, taskController.createTask);
-router.get('/:taskId', taskController.getTask);
-router.put('/:taskId', validateUpdateTask, taskController.updateTask);
-router.delete('/:taskId', taskController.deleteTask);
+router.post('/project/:projectId', requireProjectAccess, validateCreateTask, taskController.createTask);
+router.get('/:taskId', requireTaskAccess, taskController.getTask);
+router.put('/:taskId', requireTaskAccess, validateUpdateTask, taskController.updateTask);
+router.delete('/:taskId', requireTaskAccess, taskController.deleteTask);
 
 // Task movement (drag and drop)
-router.put('/:taskId/move', validateMoveTask, taskController.moveTask);
+router.put('/:taskId/move', requireTaskAccess, validateMoveTask, taskController.moveTask);
 
 // Task comments
-router.post('/:taskId/comments', validateAddComment, taskController.addTaskComment);
-router.get('/:taskId/comments', taskController.getTaskComments);
+router.post('/:taskId/comments', requireTaskAccess, validateAddComment, taskController.addTaskComment);
+router.get('/:taskId/comments', requireTaskAccess, taskController.getTaskComments);
 
 module.exports = router;

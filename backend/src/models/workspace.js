@@ -12,6 +12,10 @@ class Workspace {
     this.isActive = workspaceData.is_active;
     this.createdAt = workspaceData.created_at;
     this.updatedAt = workspaceData.updated_at;
+    this.role = workspaceData.role;
+    this.memberCount = workspaceData.member_count ? parseInt(workspaceData.member_count, 10) : undefined;
+    this.joinedAt = workspaceData.joined_at;
+    this.members = workspaceData.members;
   }
 
   // Create new workspace
@@ -64,6 +68,35 @@ class Workspace {
       }
       
       return new Workspace(result.rows[0]);
+    } finally {
+      client.release();
+    }
+  }
+
+  // Find all active workspaces a user belongs to
+  static async findByUser(userId) {
+    const client = await pool.connect();
+    try {
+      const query = `
+        SELECT
+          w.*,
+          wm.role,
+          wm.joined_at,
+          COUNT(active_members.user_id) AS member_count
+        FROM workspaces w
+        JOIN workspace_members wm ON w.id = wm.workspace_id
+        LEFT JOIN workspace_members active_members
+          ON active_members.workspace_id = w.id
+          AND active_members.is_active = true
+        WHERE wm.user_id = $1
+          AND wm.is_active = true
+          AND w.is_active = true
+        GROUP BY w.id, wm.role, wm.joined_at
+        ORDER BY w.created_at DESC
+      `;
+
+      const result = await client.query(query, [userId]);
+      return result.rows.map(row => new Workspace(row));
     } finally {
       client.release();
     }
@@ -229,7 +262,7 @@ class Workspace {
     try {
       const query = `
         UPDATE workspace_members 
-        SET role = $1, updated_at = NOW()
+        SET role = $1
         WHERE workspace_id = $2 AND user_id = $3 AND is_active = true
         RETURNING *
       `;
@@ -255,6 +288,25 @@ class Workspace {
     } finally {
       client.release();
     }
+  }
+
+  toJSON() {
+    return {
+      id: this.id,
+      name: this.name,
+      slug: this.slug,
+      description: this.description,
+      avatarUrl: this.avatarUrl,
+      ownerId: this.ownerId,
+      settings: this.settings,
+      isActive: this.isActive,
+      createdAt: this.createdAt,
+      updatedAt: this.updatedAt,
+      role: this.role,
+      memberCount: this.memberCount,
+      joinedAt: this.joinedAt,
+      members: this.members
+    };
   }
 }
 
